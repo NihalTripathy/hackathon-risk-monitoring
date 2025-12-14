@@ -52,6 +52,8 @@ interface SimulationResult {
   mitigation_applied?: {
     new_duration?: number
     risk_reduced?: boolean
+    new_fte?: number
+    new_cost?: number
   }
 }
 
@@ -763,18 +765,18 @@ export default function ActivityDetail() {
               {simulationType === 'fte' && (
                 <div>
                   <label className="block text-xs font-bold text-gray-800 mb-2">
-                    New FTE Allocation
+                    FTE Allocation (can increase or decrease)
                   </label>
                   <input
                     type="number"
                     value={newFte}
                     onChange={(e) => setNewFte(e.target.value)}
-                    placeholder="Enter FTE (e.g., 2.0 for 2 people)"
+                    placeholder="Enter new FTE (e.g., 2.0 for 2 people, 0.5 to reduce)"
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
                     min="0"
                     step="0.1"
                   />
-                  <p className="text-xs text-gray-500 mt-1">FTE = Full-Time Equivalent (1.0 = 1 person full-time)</p>
+                  <p className="text-xs text-gray-500 mt-1">FTE = Full-Time Equivalent (1.0 = 1 person full-time). You can increase or decrease from current value.</p>
                 </div>
               )}
 
@@ -905,8 +907,11 @@ export default function ActivityDetail() {
                               setReduceRisk(true)
                               setSimulationType('risk')
                             } else if (option.type === 'add_fte' && option.parameters.new_fte) {
+                              // For FTE options, set both FTE and potentially duration if estimated
                               setNewFte(option.parameters.new_fte.toString())
                               setSimulationType('fte')
+                              // Note: Duration reduction is estimated but not automatically applied
+                              // User can manually adjust if needed
                             }
                             // Scroll to simulator
                             setTimeout(() => {
@@ -1008,34 +1013,93 @@ export default function ActivityDetail() {
                     </div>
                   )}
 
+                  {/* Changes Applied Section */}
+                  {simulation.mitigation_applied && (() => {
+                    const applied = simulation.mitigation_applied
+                    const changes: string[] = []
+                    
+                    if (applied.new_duration) {
+                      changes.push(`Duration: ${applied.new_duration} days`)
+                    }
+                    if (applied.new_fte !== null && applied.new_fte !== undefined) {
+                      changes.push(`FTE: ${applied.new_fte}`)
+                    }
+                    if (applied.new_cost !== null && applied.new_cost !== undefined) {
+                      changes.push(`Cost: $${applied.new_cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
+                    }
+                    if (applied.risk_reduced) {
+                      changes.push(`Risk: Reduced by 50%`)
+                    }
+                    
+                    if (changes.length > 0) {
+                      return (
+                        <div className="mb-3 p-3 bg-blue-500/20 rounded border border-blue-300/30">
+                          <h4 className="text-xs font-bold text-blue-100 mb-2">Changes Applied</h4>
+                          <div className="space-y-1">
+                            {changes.map((change, idx) => (
+                              <div key={idx} className="text-xs text-blue-100 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-blue-300 rounded-full"></span>
+                                {change}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    }
+                    return null
+                  })()}
+
                   {simulation.improvement && (() => {
                     const p50Change = simulation.improvement.p50_improvement ?? simulation.improvement.p50_days_saved ?? 0
                     const p80Change = simulation.improvement.p80_improvement ?? simulation.improvement.p80_days_saved ?? 0
-                    const isPositive = p50Change > 0 && p80Change > 0
+                    const hasImprovement = p50Change > 0 || p80Change > 0
+                    const hasNegativeImpact = p50Change < 0 || p80Change < 0
+                    const isNeutral = p50Change === 0 && p80Change === 0
                     
                     return (
                       <div className="pt-3 border-t border-white/30">
-                        <h4 className={`text-xs font-bold mb-2 ${isPositive ? 'text-green-100' : 'text-yellow-200'}`}>
-                          {isPositive ? 'Schedule Improvement' : 'Impact'}
+                        <h4 className={`text-xs font-bold mb-2 ${
+                          hasImprovement ? 'text-green-100' : 
+                          hasNegativeImpact ? 'text-red-200' : 
+                          'text-blue-100'
+                        }`}>
+                          {hasImprovement ? 'Schedule Improvement' : 
+                           hasNegativeImpact ? 'Duration Impact' : 
+                           'No Duration Change'}
                         </h4>
                         <div className="space-y-2">
                           <div className="flex justify-between items-center bg-white/10 rounded p-2">
                             <span className="text-xs font-medium text-green-100">P50:</span>
-                            <span className={`text-sm font-bold ${isPositive ? 'text-green-100' : 'text-yellow-200'}`}>
-                              {p50Change > 0 ? '-' : '+'}{Math.abs(p50Change).toFixed(1)} days
+                            <span className={`text-sm font-bold ${
+                              p50Change > 0 ? 'text-green-100' : 
+                              p50Change < 0 ? 'text-red-200' : 
+                              'text-blue-100'
+                            }`}>
+                              {p50Change > 0 ? '-' : p50Change < 0 ? '+' : ''}{Math.abs(p50Change).toFixed(1)} days
                             </span>
                           </div>
                           <div className="flex justify-between items-center bg-white/10 rounded p-2">
                             <span className="text-xs font-medium text-green-100">P80:</span>
-                            <span className={`text-sm font-bold ${isPositive ? 'text-green-100' : 'text-yellow-200'}`}>
-                              {p80Change > 0 ? '-' : '+'}{Math.abs(p80Change).toFixed(1)} days
+                            <span className={`text-sm font-bold ${
+                              p80Change > 0 ? 'text-green-100' : 
+                              p80Change < 0 ? 'text-red-200' : 
+                              'text-blue-100'
+                            }`}>
+                              {p80Change > 0 ? '-' : p80Change < 0 ? '+' : ''}{Math.abs(p80Change).toFixed(1)} days
                             </span>
                           </div>
                         </div>
-                        {!isPositive && (
-                          <div className="mt-2 p-2 bg-yellow-500/20 rounded border border-yellow-300/30">
-                            <p className="text-xs text-yellow-100">
+                        {hasNegativeImpact && (
+                          <div className="mt-2 p-2 bg-red-500/20 rounded border border-red-300/30">
+                            <p className="text-xs text-red-100">
                               ⚠️ This change increases project duration. Consider alternative mitigation strategies.
+                            </p>
+                          </div>
+                        )}
+                        {isNeutral && (
+                          <div className="mt-2 p-2 bg-blue-500/20 rounded border border-blue-300/30">
+                            <p className="text-xs text-blue-100">
+                              ℹ️ This change has no impact on project duration. The change may affect other factors like cost or risk.
                             </p>
                           </div>
                         )}

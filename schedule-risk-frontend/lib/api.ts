@@ -217,6 +217,8 @@ export interface SimulationResult {
   mitigation_applied: {
     new_duration?: number
     risk_reduced?: boolean
+    new_fte?: number
+    new_cost?: number
   }
   // Legacy fields
   baseline?: { p50: number; p80: number }
