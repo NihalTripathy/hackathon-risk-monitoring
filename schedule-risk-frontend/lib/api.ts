@@ -401,13 +401,15 @@ export const simulateMitigation = async (
   activityId: string,
   newDuration?: number,
   reduceRisk = false,
-  newFte?: number
+  newFte?: number,
+  newCost?: number
 ): Promise<SimulationResult> => {
   const response = await api.post<SimulationResult>(`/projects/${projectId}/simulate`, {
     activity_id: activityId,
     new_duration: newDuration,
     reduce_risk: reduceRisk,
     new_fte: newFte,
+    new_cost: newCost,
   })
   return response.data
 }

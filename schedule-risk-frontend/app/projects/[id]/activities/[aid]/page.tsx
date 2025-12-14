@@ -100,9 +100,11 @@ export default function ActivityDetail() {
   const [error, setError] = useState<string | null>(null)
   const [useLLM, setUseLLM] = useState(false)
 
-  const [simulationType, setSimulationType] = useState<'duration' | 'risk'>('duration')
+  const [simulationType, setSimulationType] = useState<'duration' | 'risk' | 'fte' | 'cost'>('duration')
   const [newDuration, setNewDuration] = useState<string>('')
   const [reduceRisk, setReduceRisk] = useState(false)
+  const [newFte, setNewFte] = useState<string>('')
+  const [newCost, setNewCost] = useState<string>('')
 
   const fetchExplanation = async (useLLMValue: boolean) => {
     try {
@@ -145,6 +147,14 @@ export default function ActivityDetail() {
       setError('Please enter a new duration')
       return
     }
+    if (simulationType === 'fte' && !newFte) {
+      setError('Please enter a new FTE allocation')
+      return
+    }
+    if (simulationType === 'cost' && !newCost) {
+      setError('Please enter a new cost')
+      return
+    }
 
     setSimulating(true)
     setError(null)
@@ -154,6 +164,8 @@ export default function ActivityDetail() {
         activity_id: activityId,
         new_duration: simulationType === 'duration' ? parseFloat(newDuration) : null,
         reduce_risk: simulationType === 'risk' ? true : false,
+        new_fte: simulationType === 'fte' ? parseFloat(newFte) : null,
+        new_cost: simulationType === 'cost' ? parseFloat(newCost) : null,
       })
       // Map backend response to frontend interface
       const data = response.data
@@ -656,7 +668,7 @@ export default function ActivityDetail() {
                 <label className="block text-xs font-bold text-gray-800 mb-2">
                   Simulation Type
                 </label>
-                <div className="flex gap-4">
+                <div className="grid grid-cols-2 gap-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
@@ -667,7 +679,7 @@ export default function ActivityDetail() {
                       className="w-4 h-4 text-primary-600 cursor-pointer"
                     />
                     <span className="text-xs font-medium text-gray-700">
-                      Duration Reduction
+                      Duration
                     </span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -680,7 +692,33 @@ export default function ActivityDetail() {
                       className="w-4 h-4 text-primary-600 cursor-pointer"
                     />
                     <span className="text-xs font-medium text-gray-700">
-                      Risk Mitigation
+                      Risk
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="simType"
+                      value="fte"
+                      checked={simulationType === 'fte'}
+                      onChange={() => setSimulationType('fte')}
+                      className="w-4 h-4 text-primary-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-medium text-gray-700">
+                      People (FTE)
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="simType"
+                      value="cost"
+                      checked={simulationType === 'cost'}
+                      onChange={() => setSimulationType('cost')}
+                      className="w-4 h-4 text-primary-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-medium text-gray-700">
+                      Cost
                     </span>
                   </label>
                 </div>
@@ -721,10 +759,52 @@ export default function ActivityDetail() {
                 </div>
               )}
 
+              {/* FTE Input */}
+              {simulationType === 'fte' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-800 mb-2">
+                    New FTE Allocation
+                  </label>
+                  <input
+                    type="number"
+                    value={newFte}
+                    onChange={(e) => setNewFte(e.target.value)}
+                    placeholder="Enter FTE (e.g., 2.0 for 2 people)"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    min="0"
+                    step="0.1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">FTE = Full-Time Equivalent (1.0 = 1 person full-time)</p>
+                </div>
+              )}
+
+              {/* Cost Input */}
+              {simulationType === 'cost' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-800 mb-2">
+                    New Planned Cost ($)
+                  </label>
+                  <input
+                    type="number"
+                    value={newCost}
+                    onChange={(e) => setNewCost(e.target.value)}
+                    placeholder="Enter new cost"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              )}
+
               {/* Compact Simulate Button */}
               <button
                 onClick={handleSimulate}
-                disabled={simulating || (simulationType === 'duration' && !newDuration)}
+                disabled={
+                  simulating || 
+                  (simulationType === 'duration' && !newDuration) ||
+                  (simulationType === 'fte' && !newFte) ||
+                  (simulationType === 'cost' && !newCost)
+                }
                 className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium bg-primary-600 hover:bg-primary-700 text-white rounded-md transition-colors disabled:opacity-50"
               >
                 {simulating ? (
@@ -824,6 +904,9 @@ export default function ActivityDetail() {
                             } else if (option.type === 'reduce_risk') {
                               setReduceRisk(true)
                               setSimulationType('risk')
+                            } else if (option.type === 'add_fte' && option.parameters.new_fte) {
+                              setNewFte(option.parameters.new_fte.toString())
+                              setSimulationType('fte')
                             }
                             // Scroll to simulator
                             setTimeout(() => {

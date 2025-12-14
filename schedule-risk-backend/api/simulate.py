@@ -21,6 +21,7 @@ class MitigationRequest(BaseModel):
     new_duration: Optional[float] = None
     reduce_risk: bool = False
     new_fte: Optional[float] = None
+    new_cost: Optional[float] = None
 
 
 @router.post("/projects/{project_id}/simulate")
@@ -33,10 +34,10 @@ def simulate_mitigation_action(
     """Simulate the effect of a mitigation action on project completion - requires authentication and ownership"""
     verify_project_ownership(db, project_id, current_user)
     
-    if not request.new_duration and not request.reduce_risk and not request.new_fte:
+    if not request.new_duration and not request.reduce_risk and not request.new_fte and not request.new_cost:
         raise HTTPException(
             status_code=400, 
-            detail="Either new_duration, reduce_risk, or new_fte must be specified"
+            detail="Either new_duration, reduce_risk, new_fte, or new_cost must be specified"
         )
     
     # Validate parameters
@@ -50,6 +51,11 @@ def simulate_mitigation_action(
             status_code=400,
             detail="new_fte must be greater than or equal to 0"
         )
+    if request.new_cost is not None and request.new_cost < 0:
+        raise HTTPException(
+            status_code=400,
+            detail="new_cost must be greater than or equal to 0"
+        )
     
     # Get activities from database
     activities = get_activities(db, project_id)
@@ -59,6 +65,7 @@ def simulate_mitigation_action(
         request.new_duration,
         request.reduce_risk,
         request.new_fte,
+        request.new_cost,
         activities=activities
     )
     
@@ -98,6 +105,9 @@ def simulate_mitigation_action(
         if request.new_fte is not None:
             activity_dict["fte_allocation"] = request.new_fte
         
+        if request.new_cost is not None:
+            activity_dict["planned_cost"] = request.new_cost
+        
         # Recalculate features and risk score
         modified_activity = ActivityModel(**activity_dict)
         new_features = compute_features(modified_activity, project_id, activities=activities)
@@ -115,6 +125,8 @@ def simulate_mitigation_action(
         mitigation_type = "duration_reduction"
     elif request.new_fte:
         mitigation_type = "fte_addition"
+    elif request.new_cost:
+        mitigation_type = "cost_adjustment"
     else:
         mitigation_type = "risk_reduction"
     log_event_db(

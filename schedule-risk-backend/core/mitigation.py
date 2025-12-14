@@ -26,10 +26,11 @@ def clone_twin(twin: DigitalTwin) -> DigitalTwin:
 def modify_activity_duration(twin: DigitalTwin, activity_id: str, 
                              new_duration: Optional[float] = None,
                              reduce_risk: bool = False,
-                             new_fte: Optional[float] = None) -> DigitalTwin:
+                             new_fte: Optional[float] = None,
+                             new_cost: Optional[float] = None) -> DigitalTwin:
     """
-    Modify an activity in the twin (e.g., reduce duration, risk, or add FTE).
-    Enhanced to properly handle FTE allocation changes.
+    Modify an activity in the twin (e.g., reduce duration, risk, add FTE, or change cost).
+    Enhanced to properly handle FTE allocation changes and cost modifications.
     """
     if activity_id not in twin.activities:
         raise ValueError(f"Activity {activity_id} not found")
@@ -52,6 +53,10 @@ def modify_activity_duration(twin: DigitalTwin, activity_id: str,
         # Update FTE allocation (this affects resource utilization calculations)
         activity_dict["fte_allocation"] = new_fte
         # Note: We don't modify resource_max_fte as that's a resource constraint
+    
+    if new_cost is not None:
+        # Update planned cost (this affects cost performance calculations)
+        activity_dict["planned_cost"] = new_cost
     
     modified_activity = Activity(**activity_dict)
     
@@ -186,6 +191,7 @@ def simulate_mitigation(project_id: str, activity_id: str,
                         new_duration: Optional[float] = None,
                         reduce_risk: bool = False,
                         new_fte: Optional[float] = None,
+                        new_cost: Optional[float] = None,
                         activities: Optional[list] = None) -> Dict:
     """Simulate the effect of a mitigation action"""
     if activities is None:
@@ -198,7 +204,7 @@ def simulate_mitigation(project_id: str, activity_id: str,
     
     # Create modified twin
     modified_twin = modify_activity_duration(original_twin, activity_id, 
-                                            new_duration, reduce_risk, new_fte)
+                                            new_duration, reduce_risk, new_fte, new_cost)
     
     # Get modified forecast (use 2000 simulations for consistency)
     modified_forecast = monte_carlo_forecast(modified_twin, num_simulations=2000)
@@ -223,7 +229,9 @@ def simulate_mitigation(project_id: str, activity_id: str,
         "activity_id": activity_id,
         "mitigation_applied": {
             "new_duration": new_duration,
-            "risk_reduced": reduce_risk
+            "risk_reduced": reduce_risk,
+            "new_fte": new_fte,
+            "new_cost": new_cost
         }
     }
 
