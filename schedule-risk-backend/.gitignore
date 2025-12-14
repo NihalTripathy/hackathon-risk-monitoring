@@ -11,6 +11,8 @@ ENV/
 # Environment variables
 .env
 .env.local
+# Allow .env.example to be committed (it's a template)
+!.env.example
 
 # Database
 *.db
