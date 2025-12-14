@@ -1,0 +1,36 @@
+{
+  "trained_at": "2025-12-08T02:33:55.797609",
+  "metrics": {
+    "train_r2": 0.9919658940779288,
+    "test_r2": 0.9836954453495858,
+    "train_mae": 0.3332962506378404,
+    "test_mae": 0.5981914161409749,
+    "train_mse": 0.9552254570507723,
+    "test_mse": 2.144398436058542,
+    "cv_r2_mean": 0.9627796541594762,
+    "cv_r2_std": 0.023386592895132233,
+    "feature_importance": {
+      "delay_baseline_days": 0.09368598802285763,
+      "float_days": 0.09698040574302468,
+      "progress_slip": 0.24039595405957387,
+      "expected_delay_days": 0.012036318442215279,
+      "is_on_critical_path": 0.3985586897368087,
+      "predecessor_count": 0.0004313794903837473,
+      "successor_count": 0.0006352525972945605,
+      "downstream_critical_depth": 0.026514625737501105,
+      "in_degree": 0.00046007405890762995,
+      "out_degree": 0.0005489314950770228,
+      "resource_utilization": 0.08620696701625911,
+      "resource_overbooked": 0.0013295940821338784,
+      "percent_complete": 0.011777028383441794,
+      "risk_probability": 0.024494105537076965,
+      "risk_delay_impact_days": 0.005944685597444053,
+      "cost_impact_of_risk": 0.0
+    },
+    "training_samples": 1104,
+    "test_samples": 276,
+    "total_samples": 1380
+  },
+  "model_type": "RandomForestRegressor",
+  "feature_count": 16
+}
